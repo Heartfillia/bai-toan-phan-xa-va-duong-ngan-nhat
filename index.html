@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -375,4 +376,463 @@
                     cardTotal.className = 'px-2.5 py-2 rounded-lg bg-amber-50 border border-amber-200 transition-colors';
                     valTotal.className = 'text-sm sm:text-base font-bold text-amber-700 font-mono';
 
-                    diffBox.
+                    diffBox.className = 'px-3 py-2 rounded-lg bg-amber-50/70 border border-amber-200/80 flex items-center justify-between text-xs transition-colors';
+                    valDiff.textContent = `+${diff.toFixed(2)} cm`;
+                    valDiff.className = 'font-mono font-bold text-amber-700';
+
+                    statusBadge.textContent = 'Kéo thả điểm A, B, M';
+                    statusBadge.className = 'hidden sm:inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200 transition-colors';
+                }
+
+                // Cập nhật số đo góc tới i và góc phản xạ i'
+                if (chkPhysics.checked) {
+                    angleBox.classList.remove('hidden');
+                    const angI = Math.abs(Math.atan2(state.A.x - state.M.x, state.M.y - state.A.y)) * (180 / Math.PI);
+                    const angR = Math.abs(Math.atan2(state.B.x - state.M.x, state.M.y - state.B.y)) * (180 / Math.PI);
+                    valAngleI.textContent = `${angI.toFixed(1)}°`;
+                    valAngleR.textContent = `${angR.toFixed(1)}°`;
+                } else {
+                    angleBox.classList.add('hidden');
+                }
+            }
+
+            function drawGrid() {
+                if (!chkGrid.checked) return;
+                ctx.save();
+                ctx.strokeStyle = '#f1f5f9';
+                ctx.lineWidth = 1;
+
+                const step = PIXELS_PER_CM;
+                const centerX = Math.round(width / 2);
+
+                for (let x = centerX; x < width; x += step) {
+                    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
+                }
+                for (let x = centerX - step; x > 0; x -= step) {
+                    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
+                }
+                for (let y = lineY; y < height; y += step) {
+                    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
+                }
+                for (let y = lineY - step; y > 0; y -= step) {
+                    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
+                }
+                ctx.restore();
+            }
+
+            function drawMirrorLine() {
+                ctx.save();
+                
+                // Nền nửa mặt phẳng ảo phía dưới d
+                ctx.fillStyle = 'rgba(241, 245, 249, 0.55)';
+                ctx.fillRect(0, lineY, width, height - lineY);
+
+                // Đường thẳng d
+                ctx.beginPath();
+                ctx.moveTo(0, lineY);
+                ctx.lineTo(width, lineY);
+                ctx.strokeStyle = '#334155';
+                ctx.lineWidth = 2.5;
+                ctx.stroke();
+
+                // Ký hiệu mặt sau gương phản xạ
+                ctx.strokeStyle = '#94a3b8';
+                ctx.lineWidth = 1.2;
+                for (let x = 10; x < width; x += 15) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, lineY);
+                    ctx.lineTo(x - 7, lineY + 8);
+                    ctx.stroke();
+                }
+
+                // Nhãn d
+                ctx.fillStyle = '#1e293b';
+                ctx.font = 'italic bold 16px Inter, sans-serif';
+                ctx.fillText('d', width - 22, lineY - 10);
+
+                ctx.restore();
+            }
+
+            function drawArrowHead(p1, p2, color) {
+                const midX = (p1.x + p2.x) / 2;
+                const midY = (p1.y + p2.y) / 2;
+                const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+                const len = 10;
+
+                ctx.save();
+                ctx.translate(midX, midY);
+                ctx.rotate(angle);
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(-len, -len * 0.55);
+                ctx.lineTo(-len, len * 0.55);
+                ctx.closePath();
+                ctx.fillStyle = color;
+                ctx.fill();
+                ctx.restore();
+            }
+
+            function drawPhysicsElements() {
+                if (!chkPhysics.checked) return;
+
+                const M = state.M;
+                const A = state.A;
+                const B = state.B;
+
+                ctx.save();
+
+                // Pháp tuyến MN vuông góc với d tại M
+                const normalTopY = Math.max(24, M.y - 135);
+                ctx.beginPath();
+                ctx.setLineDash([5, 5]);
+                ctx.moveTo(M.x, M.y);
+                ctx.lineTo(M.x, normalTopY);
+                ctx.strokeStyle = '#7e22ce';
+                ctx.lineWidth = 1.8;
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Ký hiệu góc vuông tại chân pháp tuyến
+                const sq = 10;
+                ctx.beginPath();
+                ctx.moveTo(M.x + sq, M.y);
+                ctx.lineTo(M.x + sq, M.y - sq);
+                ctx.lineTo(M.x, M.y - sq);
+                ctx.strokeStyle = '#7e22ce';
+                ctx.lineWidth = 1.2;
+                ctx.stroke();
+
+                ctx.fillStyle = '#7e22ce';
+                ctx.font = 'bold 13px Inter, sans-serif';
+                ctx.fillText('N', M.x + 6, normalTopY + 12);
+
+                // Cung góc tới i và góc phản xạ i'
+                const angNormal = -Math.PI / 2;
+                const angMA = Math.atan2(A.y - M.y, A.x - M.x);
+                const angMB = Math.atan2(B.y - M.y, B.x - M.x);
+
+                // Góc tới i
+                ctx.beginPath();
+                ctx.moveTo(M.x, M.y);
+                ctx.arc(M.x, M.y, 38, Math.min(angNormal, angMA), Math.max(angNormal, angMA));
+                ctx.closePath();
+                ctx.fillStyle = 'rgba(147, 51, 234, 0.16)';
+                ctx.fill();
+                ctx.strokeStyle = '#9333ea';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                // Góc phản xạ i'
+                ctx.beginPath();
+                ctx.moveTo(M.x, M.y);
+                ctx.arc(M.x, M.y, 44, Math.min(angNormal, angMB), Math.max(angNormal, angMB));
+                ctx.closePath();
+                ctx.fillStyle = 'rgba(219, 39, 119, 0.14)';
+                ctx.fill();
+                ctx.strokeStyle = '#db2777';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                // Nhãn góc i và i' cạnh cung góc
+                const midAngI = (angNormal + angMA) / 2;
+                const midAngR = (angNormal + angMB) / 2;
+                ctx.font = 'italic bold 13px Inter, sans-serif';
+                ctx.fillStyle = '#7e22ce';
+                ctx.fillText('i', M.x + Math.cos(midAngI) * 52 - 3, M.y + Math.sin(midAngI) * 52 + 4);
+                ctx.fillStyle = '#be185d';
+                ctx.fillText("i'", M.x + Math.cos(midAngR) * 58 - 3, M.y + Math.sin(midAngR) * 58 + 4);
+
+                // Mũi tên hướng truyền tia sáng A -> M -> B
+                drawArrowHead(A, M, '#2563eb');
+                drawArrowHead(M, B, '#2563eb');
+
+                ctx.restore();
+            }
+
+            function draw() {
+                ctx.clearRect(0, 0, width, height);
+
+                drawGrid();
+                drawMirrorLine();
+
+                const A = state.A;
+                const B = state.B;
+                const M = state.M;
+                const A_prime = getSymmetricA();
+                const M0 = getOptimalM0();
+
+                // 1. Vẽ phần đối xứng (A', AA' vuông góc d tại H, ký hiệu AH = A'H, A'M và A'B)
+                if (chkSymmetry.checked) {
+                    ctx.save();
+
+                    // Nét đứt AA' vuông góc với d tại H
+                    ctx.beginPath();
+                    ctx.setLineDash([5, 5]);
+                    ctx.moveTo(A.x, A.y);
+                    ctx.lineTo(A_prime.x, A_prime.y);
+                    ctx.strokeStyle = '#f97316';
+                    ctx.lineWidth = 1.6;
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+
+                    // Ký hiệu góc vuông tại H
+                    const sq = 9;
+                    ctx.beginPath();
+                    ctx.moveTo(A.x + sq, lineY);
+                    ctx.lineTo(A.x + sq, lineY - sq);
+                    ctx.lineTo(A.x, lineY - sq);
+                    ctx.strokeStyle = '#ea580c';
+                    ctx.lineWidth = 1.3;
+                    ctx.stroke();
+
+                    // Ký hiệu bằng nhau AH = A'H
+                    const midTopY = (A.y + lineY) / 2;
+                    const midBotY = (A_prime.y + lineY) / 2;
+                    ctx.beginPath();
+                    ctx.moveTo(A.x - 5, midTopY); ctx.lineTo(A.x + 5, midTopY);
+                    ctx.moveTo(A.x - 5, midBotY); ctx.lineTo(A.x + 5, midBotY);
+                    ctx.strokeStyle = '#ea580c';
+                    ctx.lineWidth = 1.6;
+                    ctx.stroke();
+
+                // Nhãn điểm H
+                    ctx.fillStyle = '#9a3412';
+                    ctx.font = 'bold 12px Inter, sans-serif';
+                    ctx.fillText('H', A.x - 14, lineY - 6);
+
+                    // Đoạn A'M (nét đứt cam)
+                    ctx.beginPath();
+                    ctx.setLineDash([6, 4]);
+                    ctx.moveTo(A_prime.x, A_prime.y);
+                    ctx.lineTo(M.x, M.y);
+                    ctx.strokeStyle = '#f97316';
+                    ctx.lineWidth = 2.2;
+                    ctx.stroke();
+
+                    // Đoạn nối thẳng A'B (nét đứt xanh lá cây)
+                    ctx.beginPath();
+                    ctx.setLineDash([7, 5]);
+                    ctx.moveTo(A_prime.x, A_prime.y);
+                    ctx.lineTo(B.x, B.y);
+                    ctx.strokeStyle = '#10b981';
+                    ctx.lineWidth = 2.2;
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+
+                    // Điểm tối ưu M0 = A'B ∩ d
+                    if (M0.x >= 0 && M0.x <= width) {
+                        ctx.beginPath();
+                        ctx.arc(M0.x, M0.y, 5, 0, Math.PI * 2);
+                        ctx.fillStyle = '#10b981';
+                        ctx.fill();
+                        ctx.strokeStyle = '#ffffff';
+                        ctx.lineWidth = 1.5;
+                        ctx.stroke();
+
+                        if (Math.abs(M.x - M0.x) > 14) {
+                            ctx.fillStyle = '#047857';
+                            ctx.font = 'bold 13px Inter, sans-serif';
+                            ctx.fillText('M₀', M0.x - 8, M0.y + 22);
+                        }
+                    }
+
+                    ctx.restore();
+                }
+
+                // 2. Vẽ đoạn AM và MB (xanh dương)
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(A.x, A.y);
+                ctx.lineTo(M.x, M.y);
+                ctx.lineTo(B.x, B.y);
+                ctx.strokeStyle = '#2563eb';
+                ctx.lineWidth = 3;
+                ctx.lineJoin = 'round';
+                ctx.stroke();
+                ctx.restore();
+
+                // 3. Chế độ Vật lý
+                drawPhysicsElements();
+
+                // 4. Vẽ các điểm A', A, B, M
+                if (chkSymmetry.checked) {
+                    drawPoint(A_prime.x, A_prime.y, "A'", '#f97316', false, true);
+                }
+                drawPoint(A.x, A.y, 'A', '#2563eb', state.hovering === 'A' || state.dragging === 'A');
+                drawPoint(B.x, B.y, 'B', '#2563eb', state.hovering === 'B' || state.dragging === 'B');
+                drawPoint(M.x, M.y, 'M', '#dc2626', state.hovering === 'M' || state.dragging === 'M');
+
+                updateMetrics();
+            }
+
+            function drawPoint(x, y, label, color, isHighlighted, isVirtual = false) {
+                ctx.save();
+
+                if (isHighlighted) {
+                    ctx.beginPath();
+                    ctx.arc(x, y, 16, 0, Math.PI * 2);
+                    ctx.fillStyle = color + '33';
+                    ctx.fill();
+                }
+
+                ctx.beginPath();
+                ctx.arc(x, y, isVirtual ? 6.5 : 8, 0, Math.PI * 2);
+                ctx.fillStyle = isVirtual ? '#ffffff' : color;
+                ctx.fill();
+
+                ctx.lineWidth = 2.5;
+                ctx.strokeStyle = isVirtual ? color : '#ffffff';
+                ctx.stroke();
+
+                ctx.font = 'bold 15px Inter, sans-serif';
+                ctx.fillStyle = '#0f172a';
+                const offsetY = label === "A'" ? 24 : (label === 'M' ? -14 : -13);
+                const offsetX = -6;
+
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+                ctx.strokeText(label, x + offsetX, y + offsetY);
+                ctx.fillText(label, x + offsetX, y + offsetY);
+
+                ctx.restore();
+            }
+
+            // Xử lý kéo thả chuột và cảm ứng
+            function getPointerPos(e) {
+                const rect = canvas.getBoundingClientRect();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                return {
+                    x: clientX - rect.left,
+                    y: clientY - rect.top
+                };
+            }
+
+            function findHitTarget(pos) {
+                const hitRadius = 24;
+                const targets = [
+                    { id: 'M', pt: state.M },
+                    { id: 'A', pt: state.A },
+                    { id: 'B', pt: state.B }
+                ];
+                for (const t of targets) {
+                    if (dist(pos, t.pt) <= hitRadius) return t.id;
+                }
+                return null;
+            }
+
+            function onPointerDown(e) {
+                const pos = getPointerPos(e);
+                const target = findHitTarget(pos);
+                if (target) {
+                    state.dragging = target;
+                    state.animating = false;
+                    canvas.style.cursor = 'grabbing';
+                    draw();
+                } else if (Math.abs(pos.y - lineY) <= 22) {
+                    state.dragging = 'M';
+                    state.animating = false;
+                    state.M.x = clamp(pos.x, 20, width - 20);
+                    syncSliderFromM();
+                    draw();
+                }
+            }
+
+            function onPointerMove(e) {
+                const pos = getPointerPos(e);
+
+                if (state.dragging) {
+                    if (e.cancelable) e.preventDefault();
+                    const margin = 22;
+
+                    if (state.dragging === 'A') {
+                        state.A.x = clamp(pos.x, margin, width - margin);
+                        state.A.y = clamp(pos.y, margin, lineY - 24);
+                    } else if (state.dragging === 'B') {
+                        state.B.x = clamp(pos.x, margin, width - margin);
+                        state.B.y = clamp(pos.y, margin, lineY - 24);
+                    } else if (state.dragging === 'M') {
+                        state.M.x = clamp(pos.x, 20, width - 20);
+                        state.M.y = lineY;
+                        syncSliderFromM();
+                    }
+                    draw();
+                } else {
+                    const hit = findHitTarget(pos);
+                    if (hit !== state.hovering) {
+                        state.hovering = hit;
+                        canvas.style.cursor = hit ? 'grab' : 'default';
+                        draw();
+                    }
+                }
+            }
+
+            function onPointerUp() {
+                if (state.dragging) {
+                    state.dragging = null;
+                    canvas.style.cursor = state.hovering ? 'grab' : 'default';
+                    draw();
+                }
+            }
+
+            canvas.addEventListener('mousedown', onPointerDown);
+            window.addEventListener('mousemove', onPointerMove);
+            window.addEventListener('mouseup', onPointerUp);
+
+            canvas.addEventListener('touchstart', onPointerDown, { passive: false });
+            window.addEventListener('touchmove', onPointerMove, { passive: false });
+            window.addEventListener('touchend', onPointerUp);
+
+            sliderM.addEventListener('input', syncMFromSlider);
+            btnReset.addEventListener('click', resetPositions);
+            [chkSymmetry, chkPhysics, chkGrid].forEach(chk => chk.addEventListener('change', draw));
+
+            // Hiệu ứng trượt mượt mà M về M0
+            let toastTimeout = null;
+            btnOptimize.addEventListener('click', () => {
+                chkSymmetry.checked = true;
+                const targetX = clamp(getOptimalM0().x, 20, width - 20);
+                const startX = state.M.x;
+                const duration = 500;
+                const startTime = performance.now();
+                state.animating = true;
+
+                function animateStep(now) {
+                    if (!state.animating) return;
+                    const progress = Math.min((now - startTime) / duration, 1);
+                    const ease = 1 - Math.pow(1 - progress, 3);
+
+                    state.M.x = startX + (targetX - startX) * ease;
+                    syncSliderFromM();
+                    draw();
+
+                    if (progress < 1) {
+                        requestAnimationFrame(animateStep);
+                    } else {
+                        state.M.x = targetX;
+                        state.animating = false;
+                        syncSliderFromM();
+                        draw();
+                        showToast();
+                    }
+                }
+
+                requestAnimationFrame(animateStep);
+            });
+
+            function showToast() {
+                toastMessage.classList.remove('opacity-0', 'translate-y-2');
+                toastMessage.classList.add('opacity-100', 'translate-y-0');
+                clearTimeout(toastTimeout);
+                toastTimeout = setTimeout(() => {
+                    toastMessage.classList.remove('opacity-100', 'translate-y-0');
+                    toastMessage.classList.add('opacity-0', 'translate-y-2');
+                }, 2800);
+            }
+
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas();
+        });
+    </script>
+</body>
+</html>
